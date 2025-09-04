@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shelter Donation Tracker</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a better look and feel */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .form-container, .table-container {
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-700">Shelter Donation Tracker</h1>
+            <p class="text-gray-500 mt-2">A simple tool to manage and track donations.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Donation Form Section -->
+            <div class="lg:col-span-1">
+                 <div class="form-container bg-white bg-opacity-75 rounded-lg shadow-lg p-6">
+                    <h2 id="form-title" class="text-2xl font-semibold mb-4 text-gray-700">Add a New Donation</h2>
+                    <form id="donation-form" class="space-y-4">
+                        <!-- Hidden input for donation ID when editing -->
+                        <input type="hidden" id="donation-id">
+                        
+                        <div>
+                            <label for="donor-name" class="block text-sm font-medium text-gray-600">Donor's Name</label>
+                            <input type="text" id="donor-name" name="donor_name" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                        </div>
+                        
+                        <div>
+                            <label for="donation-type" class="block text-sm font-medium text-gray-600">Type of Donation</label>
+                            <select id="donation-type" name="donation_type" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                                <option>Money</option>
+                                <option>Food</option>
+                                <option>Clothing</option>
+                                <option>Toiletries</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="quantity" class="block text-sm font-medium text-gray-600">Quantity / Amount</label>
+                            <input type="text" id="quantity" name="quantity" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                        </div>
+                        
+                        <div>
+                            <label for="donation-date" class="block text-sm font-medium text-gray-600">Donation Date</label>
+                            <input type="date" id="donation-date" name="donation_date" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                        </div>
+                        
+                        <div class="flex items-center space-x-4">
+                            <button type="submit" id="submit-button" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">Add Donation</button>
+                            <button type="button" id="cancel-edit" class="w-full bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition duration-150 ease-in-out hidden">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Donation List Section -->
+            <div class="lg:col-span-2">
+                 <div class="table-container bg-white bg-opacity-75 rounded-lg shadow-lg p-6">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-700">Recorded Donations</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Donor Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="donations-list" class="bg-white divide-y divide-gray-200">
+                                <!-- Donation rows will be inserted here by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- JavaScript for Frontend Logic ---
+
+        // API base URL
+        const API_URL = 'http://127.0.0.1:5000';
+
+        // DOM Elements
+        const form = document.getElementById('donation-form');
+        const formTitle = document.getElementById('form-title');
+        const donationsList = document.getElementById('donations-list');
+        const donationIdInput = document.getElementById('donation-id');
+        const submitButton = document.getElementById('submit-button');
+        const cancelEditButton = document.getElementById('cancel-edit');
+        
+        // --- API Functions ---
+
+        /**
+         * Fetches all donations from the backend and displays them.
+         */
+        async function fetchDonations() {
+            try {
+                const response = await fetch(`${API_URL}/donations`);
+                const donations = await response.json();
+                renderDonations(donations);
+            } catch (error) {
+                console.error('Error fetching donations:', error);
+            }
+        }
+
+        /**
+         * Renders the list of donations in the table.
+         * @param {Array} donations - The array of donation objects.
+         */
+        function renderDonations(donations) {
+            donationsList.innerHTML = ''; // Clear existing list
+            if (donations.length === 0) {
+                 donationsList.innerHTML = `<tr><td colspan="5" class="text-center py-4">No donations recorded yet.</td></tr>`;
+            } else {
+                donations.forEach(donation => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">${donation.donor_name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${donation.donation_type}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${donation.quantity}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${donation.donation_date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editDonation('${donation.id}')" class="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
+                            <button onclick="deleteDonation('${donation.id}')" class="text-red-600 hover:text-red-900">Delete</button>
+                        </td>
+                    `;
+                    donationsList.appendChild(row);
+                });
+            }
+        }
+
+        /**
+         * Handles the form submission for both adding and updating donations.
+         * @param {Event} event - The form submission event.
+         */
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            // Create a FormData object from the form
+            const formData = new FormData(form);
+            // Convert FormData to a plain object
+            const donationData = Object.fromEntries(formData.entries());
+            
+            const id = donationIdInput.value;
+            // Determine if we are editing or adding a new donation
+            const isEditing = id !== '';
+            
+            const url = isEditing ? `${API_URL}/donations/${id}` : `${API_URL}/donations`;
+            const method = isEditing ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(donationData),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save donation');
+                }
+                
+                // Reset the form and refresh the donations list
+                resetForm();
+                fetchDonations();
+
+            } catch (error) {
+                console.error('Error saving donation:', error);
+            }
+        });
+
+        /**
+         * Populates the form with donation data for editing.
+         * @param {string} id - The ID of the donation to edit.
+         */
+        window.editDonation = async (id) => {
+            try {
+                // Find the donation data (in a real app, you might fetch it again)
+                const response = await fetch(`${API_URL}/donations`);
+                const donations = await response.json();
+                const donationToEdit = donations.find(d => d.id === id);
+
+                if (donationToEdit) {
+                    // Populate form fields
+                    document.getElementById('donation-id').value = donationToEdit.id;
+                    document.getElementById('donor-name').value = donationToEdit.donor_name;
+                    document.getElementById('donation-type').value = donationToEdit.donation_type;
+                    document.getElementById('quantity').value = donationToEdit.quantity;
+                    document.getElementById('donation-date').value = donationToEdit.donation_date;
+
+                    // Update UI for editing state
+                    formTitle.textContent = 'Edit Donation';
+                    submitButton.textContent = 'Update Donation';
+                    cancelEditButton.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error preparing edit:', error);
+            }
+        };
+
+        /**
+         * Deletes a donation after confirmation.
+         * @param {string} id - The ID of the donation to delete.
+         */
+        window.deleteDonation = async (id) => {
+            // A simple confirmation dialog
+            if (confirm('Are you sure you want to delete this donation?')) {
+                try {
+                    const response = await fetch(`${API_URL}/donations/${id}`, {
+                        method: 'DELETE',
+                    });
+                    if (!response.ok) {
+                        throw new Error('Failed to delete donation');
+                    }
+                    fetchDonations(); // Refresh the list
+                } catch (error)
+                 {
+                    console.error('Error deleting donation:', error);
+                }
+            }
+        };
+        
+        /**
+         * Resets the form to its initial state for adding a new donation.
+         */
+        function resetForm() {
+            form.reset();
+            donationIdInput.value = '';
+            formTitle.textContent = 'Add a New Donation';
+            submitButton.textContent = 'Add Donation';
+            cancelEditButton.classList.add('hidden');
+        }
+
+        // Event listener for the cancel edit button
+        cancelEditButton.addEventListener('click', resetForm);
+
+        // Initial fetch of donations when the page loads
+        document.addEventListener('DOMContentLoaded', fetchDonations);
+
+    </script>
+</body>
+</html>
+
